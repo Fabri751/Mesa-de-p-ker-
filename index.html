@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mesa de Póker</title>
+<link href="https://fonts.googleapis.com/css2?family=Rye&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cw:60px;
+  --felt:#0f5132;
+  --felt2:#0a3a24;
+  --wood:#4a2511;
+  --wood2:#2b1408;
+  --gold:#d4a84b;
+  --cream:#f3ead2;
+  --red:#b3262e;
+  --ink:#1a1209;
+  color-scheme:dark;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box}
+html,body{
+  margin:0;
+  background:#140a04;
+  color:var(--cream);
+  font-family:"Libre Baskerville",Georgia,serif;
+  min-height:100vh;
+}
+body{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:12px 16px;
+}
+
+/* Barra superior con título y controles de audio/guía */
+.topbar{
+  width:min(1260px,100%);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  margin-bottom:10px;
+}
+h1{
+  font-family:Rye,Georgia,serif;
+  font-weight:400;
+  color:var(--gold);
+  margin:0;
+  font-size:clamp(22px,3.2vw,36px);
+  text-align:center;
+  text-shadow:0 2px 0 #000;
+  letter-spacing:1px;
+}
+.top-actions{
+  position:absolute;
+  right:0;
+  top:50%;
+  transform:translateY(-50%);
+  z-index:30;
+  display:flex;
+  gap:6px;
+  align-items:center;
+}
+.top-actions .btn{
+  font-size:12.5px;
+  padding:7px 11px;
+  min-height:34px;
+}
+.top-actions .btn.off{
+  opacity:.62;
+}
+
+/* Contenedor panorámico para vista lateral izquierda-centro-derecha */
+.table-wrap{
+  width:100%;
+  display:flex;
+  justify-content:center;
+  overflow-x:auto;
+  padding-bottom:8px;
+}
+.table{
+  position:relative;
+  width:min(1260px,100%);
+  min-width:960px;
+  border-radius:260px / 190px;
+  background:linear-gradient(180deg,var(--wood),var(--wood2));
+  padding:20px;
+  box-shadow:0 24px 60px #000c,inset 0 2px 0 #ffffff26;
+}
+.felt{
+  border-radius:238px / 170px;
+  background:radial-gradient(ellipse at 50% 50%,var(--felt) 0%,var(--felt2) 100%);
+  border:3px solid #0007;
+  padding:22px 38px;
+  min-height:430px;
+  display:grid;
+  grid-template-columns:1.05fr 1.35fr 1.15fr;
+  align-items:center;
+  gap:18px;
+  box-shadow:inset 0 0 70px #000b;
+}
+
+/* Columnas laterales y central de la mesa */
+.side-col{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  height:100%;
+}
+.center-col{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:14px;
+  padding:14px 12px;
+  border-left:1px dashed #d4a84b33;
+  border-right:1px dashed #d4a84b33;
+  height:100%;
+}
+.zone-title{
+  font-family:Rye,serif;
+  font-size:13px;
+  letter-spacing:1.2px;
+  text-transform:uppercase;
+  color:#d4a84bcc;
+  margin:0;
+}
+
+/* Crupier y globo lateral */
+.dealer{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+  width:100%;
+}
+#dealerSvg{
+  width:132px;
+  height:auto;
+  flex:none;
+  filter:drop-shadow(0 6px 10px #0008);
+}
+.bubble{
+  position:relative;
+  background:var(--cream);
+  color:var(--ink);
+  border-radius:14px;
+  padding:10px 13px;
+  width:100%;
+  max-width:290px;
+  min-height:72px;
+  font-style:italic;
+  font-size:13.5px;
+  line-height:1.42;
+  box-shadow:0 5px 14px #0008;
+  text-align:left;
+}
+.bubble:before{
+  content:"";
+  position:absolute;
+  top:-9px;
+  left:50%;
+  margin-left:-8px;
+  border:9px solid transparent;
+  border-bottom-color:var(--cream);
+  border-top:0;
+}
+.who{
+  font-style:normal;
+  font-weight:700;
+  color:var(--red);
+  display:block;
+  font-size:12px;
+  margin-bottom:2px;
+}
+
+/* Cartas */
+.row{
+  display:flex;
+  gap:7px;
+  justify-content:center;
+  min-height:calc(var(--cw)*1.45 + 6px);
+  align-items:center;
+  flex-wrap:nowrap;
+}
+.card{
+  width:var(--cw);
+  height:calc(var(--cw)*1.45);
+  border-radius:7px;
+  background:#fffdf5;
+  color:var(--ink);
+  display:grid;
+  place-items:center;
+  font-weight:700;
+  font-size:calc(var(--cw)*.33);
+  line-height:1;
+  box-shadow:0 4px 8px #0009;
+  position:relative;
+  transform-origin:center bottom;
+  animation:deal .35s ease-out both;
+  user-select:none;
+}
+.card small{
+  position:absolute;
+  left:5px;
+  top:4px;
+  font-size:11px;
+}
+.card.r{color:var(--red)}
+.card.back{
+  background:repeating-linear-gradient(45deg,#7a1820 0 6px,#5c1017 6px 12px);
+  border:3px solid #fffdf5;
+  color:transparent;
+}
+.card.empty{
+  background:#0000;
+  border:2px dashed #ffffff33;
+  box-shadow:none;
+  animation:none;
+}
+@keyframes deal{
+  from{opacity:0;transform:translateX(-24px) rotate(-6deg)}
+}
+
+/* Bote, estado, saldo y pilas de fichas */
+.label{
+  font-size:13px;
+  color:#f3ead2d9;
+  margin:0;
+  text-align:center;
+}
+#status{
+  min-height:36px;
+  max-width:360px;
+  line-height:1.35;
+  background:#0004;
+  padding:6px 12px;
+  border-radius:10px;
+  border:1px solid #ffffff14;
+}
+.pot-box{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+  background:#0003;
+  padding:8px 18px;
+  border-radius:16px;
+  border:1px solid #d4a84b33;
+}
+.pot{
+  font-family:Rye,serif;
+  color:var(--gold);
+  font-size:21px;
+}
+.bank{
+  display:flex;
+  gap:16px;
+  align-items:flex-end;
+  justify-content:center;
+}
+.stackBox{
+  display:flex;
+  align-items:flex-end;
+  gap:4px;
+  min-height:46px;
+}
+.stack{
+  display:flex;
+  flex-direction:column-reverse;
+}
+.stack i{
+  display:block;
+  width:28px;
+  height:6px;
+  border-radius:3px;
+  margin-top:-1px;
+  border:1px solid #fff9;
+  box-shadow:0 1px 0 #0008;
+}
+.money{
+  font-size:20px;
+  font-weight:700;
+  color:var(--gold);
+}
+
+/* Controles de apuesta y acción */
+button{
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+.controls{
+  display:flex;
+  gap:7px;
+  flex-wrap:wrap;
+  justify-content:center;
+  align-items:center;
+}
+.chip{
+  width:48px;
+  height:48px;
+  border-radius:50%;
+  border:3px dashed #fffc;
+  font-family:"Libre Baskerville",serif;
+  font-weight:700;
+  font-size:13px;
+  color:#fff;
+  cursor:pointer;
+  box-shadow:0 3px 0 #0006,inset 0 0 0 3px #0003;
+  transition:transform .12s;
+  padding:0;
+}
+.chip:hover:not([disabled]){transform:translateY(-3px)}
+.chip[disabled]{opacity:.42;cursor:not-allowed}
+.chip:focus-visible,.btn:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.c5{background:#b3262e}
+.c25{background:#1f7a3d}
+.c100{background:#1b1b1b}
+.c500{background:#5b2a86}
+
+.btn{
+  font-family:Rye,serif;
+  font-size:13.5px;
+  background:var(--gold);
+  color:var(--ink);
+  border:0;
+  border-radius:8px;
+  padding:9px 13px;
+  min-height:38px;
+  cursor:pointer;
+  box-shadow:0 3px 0 #7a5a1c;
+}
+.btn:active:not([disabled]){transform:translateY(2px);box-shadow:0 1px 0 #7a5a1c}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+.btn.alt{background:var(--cream);box-shadow:0 3px 0 #8a7f60}
+
+/* Ajuste para pantallas pequeñas manteniendo la disposición horizontal izquierda-centro-derecha */
+@media(max-width:920px){
+  .table-wrap{justify-content:flex-start}
+  :root{--cw:48px}
+  .table{min-width:820px;border-radius:190px / 140px;padding:14px}
+  .felt{border-radius:175px / 125px;padding:16px 26px;min-height:360px;gap:12px}
+  #dealerSvg{width:110px}
+  .bubble{font-size:12.5px;min-height:62px;padding:8px 10px}
+  .topbar{justify-content:flex-start;padding-left:6px}
+  .top-actions .btn{font-size:11.5px;padding:6px 8px}
+}
+
+/* Tabs, menú y efectos */
+.tabs{display:flex;gap:8px;justify-content:center;margin-bottom:14px}
+.tab{font-family:Rye,serif;font-size:14px;background:#0004;color:var(--cream);border:2px solid #d4a84b66;border-radius:8px;padding:8px 14px;cursor:pointer}
+.tab.on{background:var(--gold);color:var(--ink);border-color:var(--gold)}
+.tab:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+#guide p{text-align:left;font-size:15px;line-height:1.55;margin:0 0 8px}
+#guide ol{text-align:left;line-height:1.55;font-size:15px;padding-left:22px;margin:0}
+#guide li{margin-bottom:8px}
+[hidden]{display:none!important}
+#glow{position:fixed;inset:0;pointer-events:none;z-index:40;opacity:0;transition:opacity .9s ease}
+#glow.win{opacity:1;background:#2ecc7122;box-shadow:inset 0 0 180px 60px #2ecc7188}
+#glow.lose{opacity:1;background:#e74c3c22;box-shadow:inset 0 0 180px 60px #e74c3c88}
+#menu{position:fixed;inset:0;z-index:50;display:flex;padding:16px;background:radial-gradient(ellipse at 50% 40%,var(--felt) 0,var(--felt2) 70%,#07170e 100%);overflow:auto}
+.mbox{margin:auto;width:min(560px,100%);text-align:center;background:#0006;border:3px solid var(--gold);border-radius:22px;padding:28px 22px;box-shadow:0 20px 50px #000a}
+.mbox h2{font-family:Rye,serif;font-weight:400;color:var(--gold);font-size:clamp(30px,7vw,48px);margin:0 0 6px}
+.mbox h3{font-family:Rye,serif;font-weight:400;color:var(--gold);margin:0 0 10px;font-size:24px}
+.msub{margin:0 0 20px;font-style:italic;color:#f3ead2cc}
+.mcol{display:flex;flex-direction:column;gap:12px;align-items:center;margin-top:16px}
+.mcol .btn{min-width:220px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <h1>Mesa de Póker</h1>
+  <div class="top-actions">
+    <button class="btn alt" id="musicBtn" aria-label="Activar o silenciar música">Música: ON</button>
+    <button class="btn alt" id="sfxBtn" aria-label="Activar o silenciar voz del crupier">Voz: ON</button>
+    <button class="btn alt" id="helpBtn" aria-label="Abrir guía de cómo jugar">Guía</button>
+  </div>
+</header>
+
+<div class="table-wrap">
+  <main class="table">
+    <div class="felt">
+
+      <!-- LADO IZQUIERDO: CRUPIER Y SUS CARTAS -->
+      <section class="side-col" aria-label="Zona del crupier">
+        <p class="zone-title">La Banca</p>
+        <div class="dealer">
+          <svg id="dealerSvg" viewBox="0 0 200 230" role="img" aria-label="Crupier con sonrisa sospechosa">
+            <path d="M20 230c4-42 36-60 80-60s76 18 80 60z" fill="#15110d"/>
+            <path d="M78 172l22 30 22-30z" fill="#f3ead2"/>
+            <path d="M88 190l12-8 12 8-12 8z" fill="#b3262e"/>
+            <rect x="88" y="150" width="24" height="26" fill="#d9a77c"/>
+            <ellipse cx="100" cy="100" rx="52" ry="58" fill="#e8b88c"/>
+            <path d="M44 82c0-30 22-44 56-44s56 14 56 44z" fill="#1f7a3d" stroke="#0a3a24" stroke-width="3"/>
+            <rect x="34" y="78" width="132" height="10" rx="5" fill="#16602f"/>
+            <g id="brows"><path d="M64 94l24 6" stroke="#2b1a0e" stroke-width="5" stroke-linecap="round"/><path d="M136 94l-24 6" stroke="#2b1a0e" stroke-width="5" stroke-linecap="round"/></g>
+            <ellipse cx="76" cy="110" rx="13" ry="9" fill="#fff"/><ellipse cx="124" cy="110" rx="13" ry="9" fill="#fff"/>
+            <circle id="pl" cx="76" cy="110" r="5" fill="#111"/><circle id="pr" cx="124" cy="110" r="5" fill="#111"/>
+            <path id="lidl" d="M63 110a13 9 0 0 1 26 0v-9H63z" fill="#e8b88c" opacity=".55"/><path id="lidr" d="M111 110a13 9 0 0 1 26 0v-9h-26z" fill="#e8b88c" opacity=".55"/>
+            <path d="M100 112c-4 12-8 16-2 18" stroke="#b98760" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M62 134c14-10 28-4 38-2 10-2 24-8 38 2-8 12-24 8-38 6-14 2-30 6-38-6z" fill="#2b1a0e"/>
+            <path id="mouth" d="M78 148q22 6 44-4" stroke="#6b2a1a" stroke-width="4" fill="none" stroke-linecap="round"/>
+            <path d="M118 146l5-4" stroke="#fff" stroke-width="3" stroke-linecap="round"/><circle cx="123" cy="145" r="2" fill="#d4a84b"/>
+          </svg>
+          <div class="bubble" id="bubble" aria-live="polite"><span class="who">Crupier</span><span id="said"></span></div>
+        </div>
+        <div class="row" id="dealerCards" aria-label="Cartas del crupier"></div>
+      </section>
+
+      <!-- CENTRO DE LA MESA: BOTE, CARTAS COMUNITARIAS Y ESTADO -->
+      <section class="center-col" aria-label="Centro de la mesa">
+        <div class="pot-box">
+          <p class="label">En el bote</p>
+          <div class="pot" id="betTxt">$0</div>
+          <div class="stackBox" id="betChips"></div>
+        </div>
+
+        <div>
+          <p class="zone-title" style="text-align:center;margin-bottom:6px">Cartas Comunitarias</p>
+          <div class="row" id="board" aria-label="Cartas de la mesa"></div>
+        </div>
+
+        <p class="label" id="status">Apuesta con las fichas y pide que repartan.</p>
+      </section>
+
+      <!-- LADO DERECHO: TUS CARTAS, SALDO, FICHAS Y ACCIONES -->
+      <section class="side-col" aria-label="Zona del jugador">
+        <p class="zone-title">Tu Mano</p>
+        <div class="row" id="hand" aria-label="Tus cartas"></div>
+
+        <div class="bank">
+          <div style="text-align:center">
+            <p class="label">Tu dinero</p>
+            <div class="money" id="bankTxt"></div>
+          </div>
+          <div class="stackBox" id="bankChips"></div>
+        </div>
+
+        <div class="controls" id="chips">
+          <button class="chip c5" data-v="5" aria-label="Apostar 5">$5</button>
+          <button class="chip c25" data-v="25" aria-label="Apostar 25">$25</button>
+          <button class="chip c100" data-v="100" aria-label="Apostar 100">$100</button>
+          <button class="chip c500" data-v="500" aria-label="Apostar 500">$500</button>
+        </div>
+
+        <div class="controls">
+          <button class="btn alt" id="clear">Quitar apuesta</button>
+          <button class="btn" id="deal">Repartir</button>
+          <button class="btn" id="show" disabled>Mostrar cartas</button>
+          <button class="btn" id="act" hidden>Pasar</button>
+          <button class="btn alt" id="fold" disabled>Retirarme</button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<div id="glow" aria-hidden="true"></div>
+
+<div id="menu" role="dialog" aria-modal="true" aria-labelledby="mt">
+<div class="mbox">
+<h2 id="mt">Mesa de Póker</h2>
+<div id="mainMenu">
+<p class="msub">Hoy te sientas con <b id="startMoney"></b>. El crupier ya te está mirando las fichas.</p>
+<div class="mcol"><button class="btn" id="play">Jugar</button><button class="btn alt" id="how">Cómo jugar</button></div>
+</div>
+<div id="guide" hidden>
+<h3>Cómo jugar</h3>
+<div class="tabs"><button class="tab on" id="tabA">Este juego</button><button class="tab" id="tabB">Póker real</button></div>
+<div id="gA"><ol>
+<li>Empiezas con un dinero al azar. Toca las fichas a la derecha para armar tu apuesta.</li>
+<li>Pulsa <b>Repartir</b>: recibes 2 cartas a la derecha y el crupier recibe 2 boca abajo a la izquierda.</li>
+<li>Pulsa <b>Mostrar cartas</b>: el centro de la mesa se abre de a poco, con 3 cartas (flop), 1 más (turn) y la última (river).</li>
+<li>Tras cada ronda te toca decidir: toca fichas y pulsa <b>Apostar</b> para subir, pulsa <b>Pasar</b> para seguir sin poner más, o <b>Retirarme</b>. A veces el crupier sube y tendrás que pagar o retirarte.</li>
+<li>Cada uno arma su mejor combinación con sus 2 cartas y las 5 del centro. De mayor a menor: póker, full, trío, doble pareja, pareja y carta alta.</li>
+<li>Si ganas, recibes tu apuesta (menos la comisión del crupier). Si pierdes, la pierdes. Si empatan, la recuperas. Retirarte también te cuesta la apuesta.</li>
+<li>El crupier habla mucho. No te fíes de nada de lo que dice.</li>
+</ol></div>
+<div id="gB" hidden>
+<p>La versión más popular es el Texas Hold’em. Se juega con una baraja de 52 cartas, de 2 a 10 jugadores.</p>
+<ol>
+<li><b>Ciegas:</b> dos jugadores ponen apuestas obligatorias (ciega pequeña y ciega grande) para que siempre haya algo en juego.</li>
+<li><b>Preflop:</b> cada jugador recibe 2 cartas privadas y hay una primera ronda de apuestas.</li>
+<li><b>Flop:</b> se ponen 3 cartas comunes boca arriba y hay otra ronda de apuestas.</li>
+<li><b>Turn:</b> sale la cuarta carta común y hay otra ronda.</li>
+<li><b>River:</b> sale la quinta y última carta común y hay la ronda final.</li>
+<li><b>Showdown:</b> quienes siguen en la mano muestran sus cartas. Gana la mejor mano de 5 cartas, que puedes armar con tus 2 cartas y las 5 de la mesa (usando las dos, una o ninguna de las tuyas). Si todos los demás se retiran, ganas sin mostrar nada.</li>
+</ol>
+<p><b>En tu turno puedes:</b> pasar (check, si nadie ha apostado), apostar (bet), igualar (call), subir (raise), retirarte (fold) o apostar todo (all-in). Apostar fuerte con una mano débil para que los demás se retiren se llama farol (bluff).</p>
+<p><b>Ranking de manos, de mayor a menor:</b></p>
+<ol>
+<li>Escalera real: 10, J, Q, K, A del mismo palo.</li>
+<li>Escalera de color: 5 cartas seguidas del mismo palo.</li>
+<li>Póker: 4 cartas iguales.</li>
+<li>Full: un trío y una pareja.</li>
+<li>Color: 5 cartas del mismo palo.</li>
+<li>Escalera: 5 cartas seguidas de distintos palos.</li>
+<li>Trío: 3 cartas iguales.</li>
+<li>Doble pareja: dos parejas.</li>
+<li>Pareja: 2 cartas iguales.</li>
+<li>Carta alta: si no tienes nada de lo anterior, manda tu carta más alta.</li>
+</ol>
+<p>Ojo: en nuestro juego simplificamos y solo cuentan parejas, tríos, doble pareja, full y póker.</p>
+</div>
+<div class="mcol"><button class="btn" id="play2">Entendido, jugar</button><button class="btn alt" id="back">Volver al menú</button></div>
+</div>
+</div>
+</div>
+
+<script>
+(function(){
+var $=function(i){return document.getElementById(i)};
+var money=function(n){return "$"+n.toLocaleString("es-ES")};
+var bank=Math.round((800+Math.random()*4200)/5)*5, bet=0, phase="bet", hand=[], dealer=[], board=[];
+var DEN=[[500,"c500"],[100,"c100"],[25,"c25"],[5,"c5"]];
+var COL={c5:"#b3262e",c25:"#1f7a3d",c100:"#1b1b1b",c500:"#5b2a86"};
+var R=["2","3","4","5","6","7","8","9","10","J","Q","K","A"], S=["♠","♥","♦","♣"];
+
+/* =========================================================================
+   MOTOR DE AUDIO (WEB AUDIO API):
+   Noir Lounge & Dark Cabaret lento a 72 BPM:
+   - Piano eléctrico cálido estilo Rhodes / salón vintage con chorus sutil
+   - Contrabajo acústico profundo de baja frecuencia sin armónicos metálicos
+   - Percusión suave de escobillas y pulso cardíaco aterciopelado
+   - Saxofón tenor / fliscorno melancólico y aterciopelado en Re menor
+   ========================================================================= */
+var actx=null, masterGain=null, musicGain=null, sfxGain=null, reverbNode=null, noiseBuf=null;
+var musicOn=true, sfxOn=true, jazzRunning=false, jazzTimer=null;
+var stepIdx=0, nextNoteTime=0, lastBlipTime=0;
+var TEMPO=72, SIXTEENTH=60/TEMPO/4;
+
+function createSalonReverb(ctx){
+  var rate=ctx.sampleRate, len=Math.floor(rate*2.6);
+  var buf=ctx.createBuffer(2,len,rate);
+  for(var ch=0;ch<2;ch++){
+    var d=buf.getChannelData(ch);
+    for(var i=0;i<len;i++){
+      var env=Math.pow(1-i/len,2.8);
+      d[i]=(Math.random()*2-1)*env*0.35;
+    }
+  }
+  var conv=ctx.createConvolver();
+  conv.buffer=buf;
+  return conv;
+}
+
+function initAudio(){
+  try{
+    if(!actx){
+      var AC=window.AudioContext||window.webkitAudioContext;
+      if(!AC)return;
+      actx=new AC();
+      masterGain=actx.createGain();
+      masterGain.gain.value=0.95;
+      masterGain.connect(actx.destination);
+
+      musicGain=actx.createGain();
+      musicGain.gain.value=musicOn?0.52:0;
+
+      /* Filtro general cálido para eliminar cualquier brillo sintético */
+      var warmFilter=actx.createBiquadFilter();
+      warmFilter.type="lowpass";
+      warmFilter.frequency.value=1650;
+      warmFilter.Q.value=0.6;
+
+      reverbNode=createSalonReverb(actx);
+      var wetGain=actx.createGain();
+      wetGain.gain.value=0.42;
+
+      musicGain.connect(warmFilter);
+      warmFilter.connect(masterGain);
+      warmFilter.connect(reverbNode);
+      reverbNode.connect(wetGain);
+      wetGain.connect(masterGain);
+
+      sfxGain=actx.createGain();
+      sfxGain.gain.value=sfxOn?0.55:0;
+      sfxGain.connect(masterGain);
+
+      var len=actx.sampleRate*2;
+      noiseBuf=actx.createBuffer(1,len,actx.sampleRate);
+      var data=noiseBuf.getChannelData(0), b0=0, b1=0, b2=0;
+      for(var i=0;i<len;i++){
+        var white=Math.random()*2-1;
+        b0=0.997*b0+white*0.029;
+        b1=0.985*b1+white*0.032;
+        b2=0.950*b2+white*0.048;
+        data[i]=(b0+b1+b2)*0.45;
+      }
+    }
+    if(actx.state==="suspended")actx.resume();
+  }catch(err){}
+}
+
+function mtof(m){return 440*Math.pow(2,(m-69)/12)}
+
+/* =========================================================================
+   MOTOR DE AUDIO (WEB AUDIO API) — ESTILO "GREEN VELVET PARLOR":
+   Dark Cabaret & Vintage Lounge Jazz a 80 BPM (swing lento y envolvente):
+   - Volumen de ambiente de fondo (~0.22) para no tapar la voz del crupier
+   - Contrabajo acústico walking profundo y amaderado
+   - Escobillas suaves en tarola con swing nocturno
+   - Piano de cola oscuro con acordes cálidos y resonantes
+   - Trompeta con sordina Harmon tocando melodías noir melancólicas
+   - Coro / tarareo barítono tenue y aterciopelado de fondo (formantes vocales)
+   ========================================================================= */
+var actx=null, masterGain=null, musicGain=null, sfxGain=null, reverbNode=null, noiseBuf=null;
+var musicOn=true, sfxOn=true, jazzRunning=false, jazzTimer=null;
+var stepIdx=0, nextNoteTime=0, lastBlipTime=0;
+var TEMPO=80, SIXTEENTH=60/TEMPO/4;
+
+function createSalonReverb(ctx){
+  var rate=ctx.sampleRate, len=Math.floor(rate*2.8);
+  var buf=ctx.createBuffer(2,len,rate);
+  for(var ch=0;ch<2;ch++){
+    var d=buf.getChannelData(ch);
+    for(var i=0;i<len;i++){
+      var env=Math.pow(1-i/len,2.5);
+      d[i]=(Math.random()*2-1)*env*0.36;
+    }
+  }
+  var conv=ctx.createConvolver();
+  conv.buffer=buf;
+  return conv;
+}
+
+function initAudio(){
+  try{
+    if(!actx){
+      var AC=window.AudioContext||window.webkitAudioContext;
+      if(!AC)return;
+      actx=new AC();
+      masterGain=actx.createGain();
+      masterGain.gain.value=0.95;
+      masterGain.connect(actx.destination);
+
+      /* Volumen bajo de música ambiental de fondo */
+      musicGain=actx.createGain();
+      musicGain.gain.value=musicOn?0.22:0;
+
+      var warmFilter=actx.createBiquadFilter();
+      warmFilter.type="lowpass";
+      warmFilter.frequency.value=2100;
+      warmFilter.Q.value=0.55;
+
+      reverbNode=createSalonReverb(actx);
+      var wetGain=actx.createGain();
+      wetGain.gain.value=0.46;
+
+      musicGain.connect(warmFilter);
+      warmFilter.connect(masterGain);
+      warmFilter.connect(reverbNode);
+      reverbNode.connect(wetGain);
+      wetGain.connect(masterGain);
+
+      sfxGain=actx.createGain();
+      sfxGain.gain.value=sfxOn?0.62:0;
+      sfxGain.connect(masterGain);
+
+      var len=actx.sampleRate*2;
+      noiseBuf=actx.createBuffer(1,len,actx.sampleRate);
+      var data=noiseBuf.getChannelData(0), b0=0, b1=0, b2=0;
+      for(var i=0;i<len;i++){
+        var white=Math.random()*2-1;
+        b0=0.997*b0+white*0.029;
+        b1=0.985*b1+white*0.032;
+        b2=0.950*b2+white*0.048;
+        data[i]=(b0+b1+b2)*0.45;
+      }
+    }
+    if(actx.state==="suspended")actx.resume();
+  }catch(err){}
+}
+
+function mtof(m){return 440*Math.pow(2,(m-69)/12)}
+
+function playSansBlip(ch){
+  if(!sfxOn)return;
+  initAudio();
+  if(!actx)return;
+  var now=actx.currentTime;
+  if(now-lastBlipTime<0.042)return;
+  lastBlipTime=now;
+
+  var osc=actx.createOscillator();
+  var filt=actx.createBiquadFilter();
+  var g=actx.createGain();
+
+  var code=ch.charCodeAt(0)||65;
+  var baseFreq=118+(code%7)*2.2+(Math.random()*3-1.5);
+  osc.type="square";
+  osc.frequency.setValueAtTime(baseFreq,now);
+  osc.frequency.exponentialRampToValueAtTime(baseFreq*0.92,now+0.046);
+
+  filt.type="lowpass";
+  filt.frequency.setValueAtTime(520,now);
+  filt.Q.value=1.4;
+
+  g.gain.setValueAtTime(0.0001,now);
+  g.gain.linearRampToValueAtTime(0.24,now+0.005);
+  g.gain.exponentialRampToValueAtTime(0.0001,now+0.048);
+
+  osc.connect(filt);
+  filt.connect(g);
+  g.connect(sfxGain);
+
+  osc.start(now);
+  osc.stop(now+0.052);
+}
+
+/* Contrabajo acústico walking profundo */
+function playWalkingBass(midi,t,dur,vel){
+  var sub=actx.createOscillator();
+  var body=actx.createOscillator();
+  var filt=actx.createBiquadFilter();
+  var g=actx.createGain();
+
+  var f=mtof(midi);
+  sub.type="sine";
+  sub.frequency.setValueAtTime(f*1.018,t);
+  sub.frequency.exponentialRampToValueAtTime(f,t+0.042);
+
+  body.type="triangle";
+  body.frequency.setValueAtTime(f*2,t);
+  var bodyG=actx.createGain();
+  bodyG.gain.setValueAtTime(0.15,t);
+  bodyG.gain.exponentialRampToValueAtTime(0.004,t+0.22);
+
+  filt.type="lowpass";
+  filt.frequency.setValueAtTime(230,t);
+  filt.frequency.exponentialRampToValueAtTime(95,t+dur);
+
+  var amp=vel||0.46;
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.linearRampToValueAtTime(amp,t+0.025);
+  g.gain.exponentialRampToValueAtTime(amp*0.55,t+dur*0.55);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+
+  sub.connect(filt);
+  body.connect(bodyG);
+  bodyG.connect(filt);
+  filt.connect(g);
+  g.connect(musicGain);
+
+  sub.start(t);
+  body.start(t);
+  sub.stop(t+dur+0.04);
+  body.stop(t+dur+0.04);
+}
+
+/* Escobillas suaves en tarola con swing */
+function playLoungeBrush(t,isAccent,isShuffle){
+  if(!noiseBuf)return;
+  var src=actx.createBufferSource();
+  src.buffer=noiseBuf;
+  var filt=actx.createBiquadFilter();
+  filt.type="bandpass";
+  filt.frequency.setValueAtTime(isAccent?2200:(isShuffle?1800:1450),t);
+  filt.Q.value=0.95;
+
+  var g=actx.createGain();
+  var dur=isAccent?0.26:(isShuffle?0.12:0.16);
+  var amp=isAccent?0.036:(isShuffle?0.018:0.022);
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.linearRampToValueAtTime(amp,t+0.028);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+
+  src.connect(filt);
+  filt.connect(g);
+  g.connect(musicGain);
+  src.start(t,Math.random()*1.2,dur+0.02);
+}
+
+/* Piano de cola oscuro con acordes jazz resonantes */
+function playGrandPiano(notes,t,dur,vel){
+  notes.forEach(function(m,idx){
+    var start=t+idx*0.028;
+    var oscA=actx.createOscillator();
+    var oscB=actx.createOscillator();
+    var hammer=actx.createOscillator();
+    var hammerG=actx.createGain();
+    var lp=actx.createBiquadFilter();
+    var g=actx.createGain();
+
+    var f=mtof(m);
+    oscA.type="triangle";
+    oscA.frequency.setValueAtTime(f,start);
+
+    oscB.type="sine";
+    oscB.frequency.setValueAtTime(f*1.0012,start);
+
+    hammer.type="sine";
+    hammer.frequency.setValueAtTime(f*3,start);
+    hammerG.gain.setValueAtTime(0.045,start);
+    hammerG.gain.exponentialRampToValueAtTime(0.0004,start+0.08);
+
+    lp.type="lowpass";
+    lp.frequency.setValueAtTime(1250,start);
+    lp.frequency.exponentialRampToValueAtTime(380,start+dur);
+
+    var amp=vel||0.068;
+    g.gain.setValueAtTime(0.0001,start);
+    g.gain.linearRampToValueAtTime(amp,start+0.02);
+    g.gain.exponentialRampToValueAtTime(amp*0.44,start+dur*0.48);
+    g.gain.exponentialRampToValueAtTime(0.0001,start+dur);
+
+    oscA.connect(lp);
+    oscB.connect(lp);
+    hammer.connect(hammerG);
+    hammerG.connect(lp);
+    lp.connect(g);
+    g.connect(musicGain);
+
+    oscA.start(start);
+    oscB.start(start);
+    hammer.start(start);
+    oscA.stop(start+dur+0.05);
+    oscB.stop(start+dur+0.05);
+    hammer.stop(start+dur+0.05);
+  });
+}
+
+/* Trompeta con sordina Harmon (melancólica, expresiva, estilo noir) */
+function playMutedTrumpet(midi,t,dur,vel){
+  var saw=actx.createOscillator();
+  var tri=actx.createOscillator();
+  var vib=actx.createOscillator();
+  var vibG=actx.createGain();
+  var harmon=actx.createBiquadFilter();
+  var lp=actx.createBiquadFilter();
+  var g=actx.createGain();
+
+  var f=mtof(midi);
+  saw.type="sawtooth";
+  saw.frequency.setValueAtTime(f*0.985,t);
+  saw.frequency.exponentialRampToValueAtTime(f,t+0.11);
+
+  tri.type="triangle";
+  tri.frequency.setValueAtTime(f,t);
+
+  vib.type="sine";
+  vib.frequency.setValueAtTime(4.6,t);
+  vibG.gain.setValueAtTime(0.15,t);
+  vibG.gain.linearRampToValueAtTime(3.2,t+dur*0.55);
+  vib.connect(vibG);
+  vibG.connect(saw.frequency);
+  vibG.connect(tri.frequency);
+
+  /* Resonancia nasal suave de sordina Harmon */
+  harmon.type="bandpass";
+  harmon.frequency.setValueAtTime(1350,t);
+  harmon.Q.value=2.4;
+
+  lp.type="lowpass";
+  lp.frequency.setValueAtTime(1650,t);
+  lp.frequency.exponentialRampToValueAtTime(920,t+dur);
+
+  var amp=vel||0.062;
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.linearRampToValueAtTime(amp,t+0.09);
+  g.gain.setValueAtTime(amp*0.84,t+dur*0.7);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+
+  saw.connect(harmon);
+  tri.connect(harmon);
+  harmon.connect(lp);
+  lp.connect(g);
+  g.connect(musicGain);
+
+  saw.start(t);
+  tri.start(t);
+  vib.start(t);
+  saw.stop(t+dur+0.06);
+  tri.stop(t+dur+0.06);
+  vib.stop(t+dur+0.06);
+}
+
+/* Voces tenues de fondo: tarareo / murmullo coral barítono ("mmm / ooh") con formantes vocales */
+function playFaintBaritoneVoice(notes,t,dur,vel){
+  notes.forEach(function(m,idx){
+    var start=t+idx*0.06;
+    var osc1=actx.createOscillator();
+    var osc2=actx.createOscillator();
+    var vib=actx.createOscillator();
+    var vibG=actx.createGain();
+    var f1=actx.createBiquadFilter();
+    var f2=actx.createBiquadFilter();
+    var mix=actx.createGain();
+    var g=actx.createGain();
+
+    var f=mtof(m);
+    osc1.type="sawtooth";
+    osc1.frequency.setValueAtTime(f*0.994,start);
+    osc1.frequency.exponentialRampToValueAtTime(f,start+0.25);
+
+    osc2.type="triangle";
+    osc2.frequency.setValueAtTime(f*1.002,start);
+
+    vib.type="sine";
+    vib.frequency.setValueAtTime(4.2+idx*0.3,start);
+    vibG.gain.setValueAtTime(0.4,start);
+    vibG.gain.linearRampToValueAtTime(2.4,start+dur*0.5);
+    vib.connect(vibG);
+    vibG.connect(osc1.frequency);
+    vibG.connect(osc2.frequency);
+
+    /* Formantes vocales de tarareo barítono oscuro ("ooh / mmm") */
+    f1.type="bandpass";
+    f1.frequency.setValueAtTime(340,start);
+    f1.Q.value=3.2;
+
+    f2.type="bandpass";
+    f2.frequency.setValueAtTime(760,start);
+    f2.Q.value=3.8;
+
+    var f2Gain=actx.createGain();
+    f2Gain.gain.value=0.45;
+
+    var amp=vel||0.042;
+    g.gain.setValueAtTime(0.0001,start);
+    g.gain.linearRampToValueAtTime(amp,start+0.45);
+    g.gain.setValueAtTime(amp*0.88,start+dur*0.68);
+    g.gain.exponentialRampToValueAtTime(0.0001,start+dur);
+
+    osc1.connect(f1);
+    osc2.connect(f1);
+    osc1.connect(f2);
+    osc2.connect(f2);
+    f1.connect(mix);
+    f2.connect(f2Gain);
+    f2Gain.connect(mix);
+    mix.connect(g);
+    g.connect(musicGain);
+
+    osc1.start(start);
+    osc2.start(start);
+    vib.start(start);
+    osc1.stop(start+dur+0.08);
+    osc2.stop(start+dur+0.08);
+    vib.stop(start+dur+0.08);
+  });
+}
+
+/* Progresión "Green Velvet Parlor" (16 compases en Mi menor / Si7 cabaret noir a 80 BPM)
+   Cada compás tiene 16 semicorcheas con feel de swing (corchea atresillada) */
+var GREEN_VELVET=[
+  // Sección A: Introducción y verso íntimo (Em -> Am7 -> B7 -> Em)
+  {bass:[40,43,47,45], ch:[55,59,62,66], trp:[[0,71,8],[10,69,6]], voice:[52,55]},
+  {bass:[40,47,43,40], ch:[55,59,62,64], trp:[[0,67,10],[12,66,4]], voice:null},
+  {bass:[45,48,52,50], ch:[57,60,64,67], trp:[[0,69,14]],           voice:[52,57]},
+  {bass:[45,43,42,40], ch:[57,60,64,67], trp:[[4,67,6],[11,66,5]],  voice:null},
+  {bass:[47,42,45,47], ch:[57,63,66,69], trp:[[0,66,8],[10,67,6]],  voice:[51,57]},
+  {bass:[47,45,43,42], ch:[57,63,66,69], trp:[[0,69,10],[12,66,4]], voice:null},
+  {bass:[40,47,43,47], ch:[55,59,62,66], trp:[[0,64,14]],           voice:[52,55]},
+  {bass:[40,43,45,46], ch:[55,59,62,64], trp:[[8,64,4],[12,66,4]],  voice:null},
+
+  // Sección B: Coro atmosférico y puente de salón ("The house will always take its share")
+  {bass:[48,52,55,52], ch:[55,60,64,67], trp:[[0,67,8],[10,72,6]],  voice:[55,60]},
+  {bass:[47,43,47,43], ch:[55,59,62,66], trp:[[0,71,10],[12,69,4]], voice:[55,59]},
+  {bass:[45,48,52,48], ch:[57,60,64,67], trp:[[0,69,12]],           voice:[52,57]},
+  {bass:[42,45,48,45], ch:[57,60,64,69], trp:[[2,71,6],[10,69,6]],  voice:[54,57]},
+  {bass:[47,42,47,45], ch:[57,63,66,69], trp:[[0,67,8],[10,66,6]],  voice:[51,57]},
+  {bass:[47,45,42,39], ch:[57,63,66,70], trp:[[0,63,10],[12,66,4]], voice:[51,54]},
+  {bass:[40,47,43,47], ch:[55,59,62,66], trp:[[0,64,15]],           voice:[52,55]},
+  {bass:[40,47,43,47], ch:[55,59,64],    trp:[],                    voice:[47,52]}
+];
+
+function scheduleStep(s,t){
+  var cycle=Math.floor(s/256); // 16 compases * 16 pasos = 256 pasos
+  var bar=Math.floor(s/16)%16;
+  var beatStep=s%16;
+  var info=GREEN_VELVET[bar];
+
+  /* Swing jazz lento en corcheas */
+  var swing=(beatStep%4===2)?SIXTEENTH*0.36:0;
+  var time=t+swing;
+
+  /* Contrabajo walking en cada negra */
+  if(beatStep%4===0){
+    var bIdx=beatStep/4;
+    playWalkingBass(info.bass[bIdx],time,SIXTEENTH*3.85,bIdx===0?0.48:0.39);
+  }
+
+  /* Escobillas de tarola: pulso suave en 1 y 3, barrido en 2 y 4, y shuffle antes de 3 y 1 */
+  if(beatStep===0 || beatStep===8){
+    playLoungeBrush(time,false,false);
+  }else if(beatStep===4 || beatStep===12){
+    playLoungeBrush(time,true,false);
+  }else if(beatStep===6 || beatStep===14){
+    playLoungeBrush(time,false,true);
+  }
+
+  /* Piano de cola oscuro con acordes cálidos */
+  if(beatStep===0){
+    playGrandPiano(info.ch,time,SIXTEENTH*11.0,0.065);
+  }else if(beatStep===10 && bar%2===1){
+    playGrandPiano(info.ch,time,SIXTEENTH*5.2,0.038);
+  }
+
+  /* Voces barítonas tenues de fondo (tarareo aterciopelado en compases clave) */
+  if(beatStep===0 && info.voice){
+    playFaintBaritoneVoice(info.voice,time,SIXTEENTH*14.5,0.044);
+  }
+
+  /* Trompeta con sordina Harmon (alternando frases melódicas con espacios instrumentales) */
+  var playTrp=(cycle%3!==1) || (bar<8);
+  if(playTrp && info.trp){
+    for(var m=0;m<info.trp.length;m++){
+      if(info.trp[m][0]===beatStep){
+        playMutedTrumpet(info.trp[m][1],time,SIXTEENTH*info.trp[m][2],0.062);
+      }
+    }
+  }
+}
+
+function jazzScheduler(){
+  if(!jazzRunning || !actx)return;
+  while(nextNoteTime < actx.currentTime + 0.18){
+    scheduleStep(stepIdx,nextNoteTime);
+    nextNoteTime += SIXTEENTH;
+    stepIdx++;
+  }
+  jazzTimer=setTimeout(jazzScheduler,45);
+}
+
+function startJazz(){
+  initAudio();
+  if(!actx || jazzRunning)return;
+  jazzRunning=true;
+  nextNoteTime=actx.currentTime+0.05;
+  jazzScheduler();
+}
+
+$("musicBtn").onclick=function(){
+  musicOn=!musicOn;
+  initAudio();
+  if(musicGain && actx){
+    musicGain.gain.setTargetAtTime(musicOn?0.22:0,actx.currentTime,0.08);
+  }
+  if(musicOn && !jazzRunning)startJazz();
+  this.textContent="Música: "+(musicOn?"ON":"OFF");
+  this.classList.toggle("off",!musicOn);
+};
+
+$("sfxBtn").onclick=function(){
+  sfxOn=!sfxOn;
+  initAudio();
+  if(sfxGain && actx){
+    sfxGain.gain.setTargetAtTime(sfxOn?0.62:0,actx.currentTime,0.04);
+  }
+  this.textContent="Voz: "+(sfxOn?"ON":"OFF");
+  this.classList.toggle("off",!sfxOn);
+};
+
+/* =========================================================================
+   DIÁLOGOS DEL CRUPIER (ESTILO RELAJADO, SARCÁSTICO Y MINIMALISTA)
+   ========================================================================= */
+function pick(a){return a[Math.floor(Math.random()*a.length)]}
+function say(t,cb){
+  var el=$("said"),i=0,m=$("mouth");clearInterval(say.t);el.textContent="";
+  say.t=setInterval(function(){
+    var ch=t.charAt(i);
+    el.textContent=t.slice(0,++i);
+    if(ch && /[a-záéíóúüñ0-9]/i.test(ch))playSansBlip(ch);
+    m.setAttribute("d",i%2?"M78 146q22 14 44 -2":"M78 148q22 4 44-4");
+    if(i>=t.length){clearInterval(say.t);m.setAttribute("d","M78 148q22 6 44-4");if(cb)cb()}
+  },34);
+  clearTimeout(idle.t);idle.t=setTimeout(idle,15000);
+}
+
+var IDLE=[
+  "siéntate. las fichas no se van a perder solas.",
+  "esa baraja es nueva. bueno, nueva para ti.",
+  "no hago trampas. qué flojera.",
+  "¿cuánto llevas ahí? solo pregunto por deporte.",
+  "pon una ficha. o dos. yo no tengo prisa.",
+  "mis manos siempre están sobre la mesa. casi siempre.",
+  "la casa siempre gana. pero oye, qué buen rato pasamos."
+];
+function idle(){if(phase=="reveal"||!started)return;say(pick(IDLE))}
+
+var started=false,runStep,step=0,roundBet=0,owed=0;
+var ASK=[
+  "tu turno. ¿pones fichas o pasas? me da igual. bueno, no.",
+  "tú decides. tómate tu tiempo. tengo toda la noche.",
+  "¿subes o pasas? las cartas no van a cambiar solas."
+];
+var RAISED=[
+  "vaya, subes. qué valiente.",
+  "anotado. me gusta cómo piensas. o cómo gastas."
+];
+var PASS=[
+  "¿pasas? qué tranquilo. casi me duermo.",
+  "pasas. prudente. aburrido, pero prudente."
+];
+var DRAISE=[
+  "subo {n}. solo para darle emoción.",
+  "pongo {n} más. ¿sigues o te vas?"
+];
+var PAID=[
+  "pagas. qué confianza.",
+  "buena decisión. para mí, claro."
+];
+
+function glow(k){var g=$("glow");g.className="";void g.offsetWidth;g.className=k;clearTimeout(glow.t);glow.t=setTimeout(function(){g.className=""},2600)}
+function showBoard(n,prev){
+  var row=$("board");row.innerHTML="";
+  for(var i=0;i<5;i++){
+    var c=i<n?card(board[i]):card(null,true);
+    if(i<prev||i>=n)c.style.animation="none";
+    row.appendChild(c);
+  }
+}
+var STEPS=[
+ [3,0,"Flop",["el flop. tres cartas. nada sospechoso por aquí.","ahí van tres. mira bien."]],
+ [4,3,"Turn",["el turn. cuarta carta. ¿sigues cómodo?","una más. el ambiente se pone interesante."]],
+ [5,4,"River",["el river. la última. ya no hay vuelta atrás.","última carta. a ver qué tienes."]]
+];
+
+function card(c,back){
+  var d=document.createElement("div");
+  if(back){d.className="card back";d.textContent="?";return d}
+  d.className="card"+((c.s==1||c.s==2)?" r":"");
+  d.innerHTML="<small>"+R[c.r]+S[c.s]+"</small>"+R[c.r]+S[c.s];
+  d.style.animationDelay=(c.dl||0)+"s";return d;
+}
+function fill(id,list,hide,n){
+  var row=$(id);row.innerHTML="";
+  for(var i=0;i<n;i++){
+    var c=list[i];
+    if(!c){var e=document.createElement("div");e.className="card empty";row.appendChild(e)}
+    else{c.dl=i*.1;row.appendChild(card(c,hide))}
+  }
+}
+function stacks(box,amount,max){
+  var el=$(box);el.innerHTML="";var left=amount;
+  DEN.forEach(function(d){
+    var n=Math.min(Math.floor(left/d[0]),max);left-=Math.floor(left/d[0])*d[0];
+    if(!n)return;var s=document.createElement("div");s.className="stack";
+    for(var i=0;i<n;i++){var c=document.createElement("i");c.style.background=COL[d[1]];s.appendChild(c)}
+    el.appendChild(s);
+  });
+}
+function render(){
+  $("bankTxt").textContent=money(bank);$("betTxt").textContent=money(bet);
+  stacks("bankChips",bank,12);stacks("betChips",bet,12);
+  var b=phase=="bet",dc=phase=="decide",ask=dc||phase=="call";
+  $("deal").disabled=!(b&&bet>0);
+  $("clear").disabled=!((b&&bet>0)||(dc&&bet>roundBet));
+  $("show").hidden=ask;$("act").hidden=!ask;
+  $("show").disabled=phase!="play";
+  $("fold").disabled=!(phase=="play"||ask);
+  $("act").textContent=phase=="call"?"Pagar "+money(owed):(bet>roundBet?"Apostar +"+money(bet-roundBet):"Pasar");
+  document.querySelectorAll(".chip").forEach(function(c){c.disabled=!(b||dc)||+c.dataset.v>bank-bet});
+}
+function deck(){
+  var d=[];for(var r=0;r<13;r++)for(var s=0;s<4;s++)d.push({r:r,s:s});
+  for(var i=d.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=d[i];d[i]=d[j];d[j]=t}
+  return d;
+}
+function score(cs){
+  var cnt={};cs.forEach(function(c){cnt[c.r]=(cnt[c.r]||0)+1});
+  var g=Object.keys(cnt).map(function(k){return [cnt[k],+k]});
+  g.sort(function(a,b){return b[0]-a[0]||b[1]-a[1]});
+  var flat=[];g.forEach(function(x){flat.push(x[0],x[1])});return flat;
+}
+function cmp(a,b){for(var i=0;i<Math.min(a.length,b.length);i++){if(a[i]!=b[i])return a[i]-b[i]}return 0}
+function name(s){
+  var m=s[0];
+  if(m==4)return "póker";if(m==3&&s[2]==2)return "full";if(m==3)return "trío";
+  if(m==2&&s[2]==2)return "doble pareja";if(m==2)return "pareja de "+R[s[1]];return "carta alta ("+R[s[1]]+")";
+}
+
+$("chips").addEventListener("click",function(e){
+  var v=+e.target.dataset.v;if(!v||(phase!="bet"&&phase!="decide")||bet+v>bank)return;
+  bet+=v;render();
+  if(bet>=bank)say("¿todo? oye, me cae bien tu estilo.");
+  else if(bet>=500)say(pick(["eso ya pesa. sigue así.","una apuesta seria. me gusta."]));
+  else say(pick(["poquito, ¿eh? bueno, por algo se empieza.","buena ficha. se ve cómoda en el bote."]));
+});
+$("clear").onclick=function(){
+  if(phase=="decide"){bet=roundBet;render();say("¿te arrepientes? normal.");return}
+  bet=0;render();say("fichas de vuelta. sin rencores.");
+};
+
+$("deal").onclick=function(){
+  var d=deck();hand=[d[0],d[1]];dealer=[d[2],d[3]];board=d.slice(4,9);phase="play";
+  fill("hand",hand,false,2);fill("dealerCards",dealer,true,2);fill("board",board,true,5);
+  $("status").textContent="Repartido. Pulsa Mostrar cartas para abrir la mesa.";
+  render();
+  say(pick([
+    "tus cartas se ven... interesantes. no diré más.",
+    "con esa mano yo me quedaría. o no. tú sabrás.",
+    "ya vi las mías. sin querer, claro."
+  ]));
+};
+
+$("show").onclick=function(){
+  phase="reveal";render();
+  function go(i){
+    if(i>=STEPS.length){
+      $("status").textContent="Todas las cartas a la vista. El crupier muestra su mano...";
+      setTimeout(finish,1800);return;
+    }
+    var s=STEPS[i];
+    $("status").textContent=s[2]+"...";
+    setTimeout(function(){
+      showBoard(s[0],s[1]);
+      say(pick(s[3]),function(){setTimeout(function(){askTurn(i)},1100)});
+    },i?200:600);
+  }
+  runStep=go;
+  $("status").textContent="Abriendo la mesa...";
+  say("veamos qué trae la mesa...",function(){go(0)});
+};
+function askTurn(i){
+  step=i;roundBet=bet;phase="decide";
+  $("status").textContent="Tu turno en el "+STEPS[i][2].toLowerCase()+": ¿pones más fichas o pasas?";
+  say(pick(ASK));render();
+}
+function nextRound(line){
+  phase="reveal";render();
+  say(line,function(){setTimeout(function(){runStep(step+1)},900)});
+}
+$("act").onclick=function(){
+  if(phase=="call"){
+    bet+=owed;owed=0;nextRound(pick(PAID));return;
+  }
+  if(phase!="decide")return;
+  if(bet>roundBet){nextRound(pick(RAISED));return}
+  var room=bank-bet;
+  if(room>=5&&Math.random()<.3){
+    owed=Math.min(room,5*(1+Math.floor(Math.random()*10)));
+    phase="call";render();
+    $("status").textContent="El crupier sube "+money(owed)+". ¿Pagas o te retiras?";
+    say(pick(DRAISE).replace("{n}",money(owed)));
+  }else nextRound(pick(PASS));
+};
+function finish(){
+  phase="end";
+  fill("dealerCards",dealer,false,2);
+  var me=score(hand.concat(board)),him=score(dealer.concat(board)),r=cmp(me,him);
+  var msg,t;
+  if(r>0){
+    var cut=Math.round(bet*.1);bank+=bet-cut;
+    msg="Ganaste con "+name(me)+" contra "+name(him)+". Ganancia: "+money(bet-cut)+".";
+    t=pick([
+      "vaya, ganaste. qué raro. ah, son "+money(cut)+" de comisión por el servicio.",
+      "bien jugado. la casa se queda "+money(cut)+" por las molestias."
+    ]);
+  }else if(r==0){
+    msg="Empate con "+name(me)+". Recuperas tu apuesta.";
+    t="empate. qué anticlimático. toma tus fichas.";
+  }else{
+    bank-=bet;
+    msg="Perdiste: "+name(him)+" del crupier gana a "+name(me)+". Pierdes "+money(bet)+".";
+    t=pick([
+      "mala suerte. las cartas no mienten. yo a veces sí, pero ellas no.",
+      "casi. bueno, en realidad no tanto. gracias por las fichas."
+    ]);
+  }
+  bet=0;$("status").textContent=msg;glow(r>0?"win":r<0?"lose":"");say(t,after);render();
+}
+$("fold").onclick=function(){
+  phase="end";bank-=bet;fill("dealerCards",dealer,false,2);
+  $("status").textContent="Te retiraste. Pierdes "+money(bet)+".";
+  var lost=bet;bet=0;glow("lose");
+  say("te vas. lástima, ibas ganando. bueno, ya da igual. gracias por los "+money(lost)+".",after);render();
+};
+function after(){
+  if(bank<5){
+    setTimeout(function(){
+      say("te quedaste en cero. ten, te presto algo. luego hablamos de los intereses.");
+      bank=Math.round((300+Math.random()*700)/5)*5;
+      $("status").textContent="El Crupier te prestó "+money(bank)+".";
+      phase="bet";render();
+    },2400);
+  }else{
+    setTimeout(function(){
+      phase="bet";
+      $("status").textContent="Nueva mano. Pon tus fichas.";
+      hand=[];fill("hand",[],false,0);fill("board",[],false,0);fill("dealerCards",[],false,0);
+      render();
+    },2200);
+  }
+}
+
+/* Mirada del crupier: sigue el cursor y guiña */
+var pl=$("pl"),pr=$("pr"),svg=$("dealerSvg");
+document.addEventListener("pointermove",function(e){
+  var b=svg.getBoundingClientRect(),cx=b.left+b.width/2,cy=b.top+b.height*.48;
+  var dx=e.clientX-cx,dy=e.clientY-cy,L=Math.hypot(dx,dy)||1,k=Math.min(6,L/40);
+  var x=dx/L*k,y=dy/L*k*.6;
+  pl.setAttribute("cx",76+x);pr.setAttribute("cx",124+x);pl.setAttribute("cy",110+y);pr.setAttribute("cy",110+y);
+});
+setInterval(function(){
+  if(Math.random()<.5){
+    var s=Math.random()<.5?-6:6;pl.setAttribute("cx",76+s);pr.setAttribute("cx",124+s);
+  }else{
+    var l=$("lidr");l.setAttribute("opacity","1");setTimeout(function(){l.setAttribute("opacity",".55")},260);
+  }
+},4200);
+
+fill("hand",[],false,0);fill("board",[],false,0);fill("dealerCards",[],false,0);
+render();
+$("startMoney").textContent=money(bank);
+
+function start(){
+  $("menu").hidden=true;
+  if(musicOn)startJazz();
+  if(started)return;
+  started=true;
+  say("qué tal. traes "+money(bank)+". qué casualidad, justo lo que le faltaba a mi mesa.");
+}
+$("play").onclick=start;$("play2").onclick=start;
+$("how").onclick=function(){$("mainMenu").hidden=true;$("guide").hidden=false};
+function tab(a){$("gA").hidden=!a;$("gB").hidden=a;$("tabA").className="tab"+(a?" on":"");$("tabB").className="tab"+(a?"":" on");$("menu").scrollTop=0}
+$("tabA").onclick=function(){tab(true)};$("tabB").onclick=function(){tab(false)};
+$("back").onclick=function(){$("guide").hidden=true;$("mainMenu").hidden=false};
+$("helpBtn").onclick=function(){$("menu").hidden=false;$("mainMenu").hidden=true;$("guide").hidden=false};
+})();
+</script>
+</body>
+</html>
